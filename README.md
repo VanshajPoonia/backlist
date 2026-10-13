@@ -87,6 +87,8 @@ Narrating, proof-listening and mastering the *A Princess of Mars* sample (3 minu
 | Narrator on the GPU, not isolated | 1:34 | 2.1x real time |
 | No GPU at all (both models on the CPU) | 4:51 | 0.7x real time |
 
+On the GPU every line of that chapter passes. The CPU build of the narrator is 8-bit, and with it one line is flagged: *"there are but ten chieftains"*, heard as "about 10". That changes the meaning, so it is worth the ten seconds it takes to listen.
+
 The listener always runs on the CPU, and it is only quick when the page is cross-origin isolated, which lets ONNX Runtime use several threads. GitHub Pages cannot send the headers for that, so the service worker (`sw.js`) adds them to every file it serves and the page reloads itself once on the first visit. On a host that can send headers, `vercel.json` does the same job.
 
 ## Run it
