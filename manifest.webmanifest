@@ -1,0 +1,10 @@
+{
+  "name": "Backlist",
+  "short_name": "Backlist",
+  "description": "Turn the books you have already written into audiobooks, narrated and proof-listened on your own laptop.",
+  "start_url": "./",
+  "display": "standalone",
+  "background_color": "#f2f4f7",
+  "theme_color": "#5b3fd1",
+  "icons": [{ "src": "assets/icon.svg", "sizes": "any", "type": "image/svg+xml" }]
+}

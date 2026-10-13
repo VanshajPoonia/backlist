@@ -1,0 +1,17 @@
+{
+  "name": "backlist",
+  "version": "1.0.0",
+  "description": "Audiobook narration for indie authors: Kokoro narrates, Whisper proof-listens, both in your browser",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "start": "python3 -m http.server 8000",
+    "books": "node scripts/books.mjs",
+    "test": "node tests/unit.mjs && node tests/proof.mjs"
+  },
+  "devDependencies": {
+    "@huggingface/transformers": "4.3.1",
+    "phonemizer": "1.2.1"
+  },
+  "license": "MIT"
+}
