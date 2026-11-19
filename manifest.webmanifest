@@ -1,6 +1,6 @@
 {
-  "name": "Backlist",
-  "short_name": "Backlist",
+  "name": "AuthorVoice: Audiobook Maker for Authors",
+  "short_name": "AuthorVoice",
   "description": "Turn the books you have already written into audiobooks, narrated and proof-listened on your own laptop.",
   "start_url": "./",
   "display": "standalone",

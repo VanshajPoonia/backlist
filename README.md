@@ -1,4 +1,6 @@
-# Backlist 🎙️
+# AuthorVoice 🎙️
+
+**Audiobook Maker for Authors.** Formerly called Backlist.
 
 Audiobooks of the books you have already written, made on your own laptop.
 
@@ -12,11 +14,11 @@ Paste a chapter. **Kokoro**, an open-weight voice model, narrates it in your bro
 
 A human-narrated audiobook costs an indie author $200 to $400 per finished hour, so a ten-hour novel is $2,000 to $4,000. An author with fifteen books in their backlist does not have that, which is why most backlists are never narrated. Text-to-speech fixes the cost. It does not fix the other half of audiobook production: **proof-listening**, where someone hears every minute against the manuscript to catch skipped words, misread words and garbled lines. That is a paid human job too, and nobody wants to sit through ten hours of a voice model to find the six lines it got wrong.
 
-So Backlist uses a second open model as the proofer. It cannot judge performance, but it can hear when the words are wrong, and that turns out to be most of what goes wrong.
+So AuthorVoice uses a second open model as the proofer. It cannot judge performance, but it can hear when the words are wrong, and that turns out to be most of what goes wrong.
 
 ## How it works
 
-<img src="docs/how-it-works.png" alt="How Backlist proof-listens" width="640">
+<img src="docs/how-it-works.png" alt="How AuthorVoice proof-listens" width="640">
 
 ```
 manuscript ──► chapters ──► lines (<= 50 words) ──► narration rules + your pronunciation guide
@@ -42,7 +44,7 @@ manuscript ──► chapters ──► lines (<= 50 words) ──► narration 
 Things the listener caught while building this, each now handled in `src/narrate.js` or `src/manuscript.js`:
 
 - **Roman numerals are read as "Roman".** Kokoro reads *Chapter IV* as "Chapter Roman four" and *Henry VIII* as "Henry Roman eight". Book headings get cardinals ("Chapter Four"), monarchs get ordinals ("Henry the Eighth").
-- **Long sentences are cut off without warning.** Kokoro reads at most 510 phoneme tokens at a time and silently drops the rest. Across the three books used for testing, **21 sentences** are over that limit; the longest, in *A Princess of Mars*, is 168 words (1,317 tokens), so more than half of it would simply never be said. Backlist splits sentences over 50 words at their own commas and semicolons, and re-splits any line that still comes close.
+- **Long sentences are cut off without warning.** Kokoro reads at most 510 phoneme tokens at a time and silently drops the rest. Across the three books used for testing, **21 sentences** are over that limit; the longest, in *A Princess of Mars*, is 168 words (1,317 tokens), so more than half of it would simply never be said. AuthorVoice splits sentences over 50 words at their own commas and semicolons, and re-splits any line that still comes close.
 
 ## Measured
 
@@ -56,10 +58,10 @@ The checker's rules were tuned on 30 lines of *A Christmas Carol*, then frozen a
 |---|---|---|---|---|---|---|
 | Exact match after normalising | 25/80 (31%) | 74/74 | 68/74 | 74/74 | 74/74 | 98% |
 | Word error rate ≤ 15% | 1/80 (1%) | 27/74 | 24/74 | 5/74 | 74/74 | 44% |
-| **Backlist, rules frozen before the test** | **1/80 (1%)** | **74/74** | **67/74** | **72/74** | **74/74** | **97%** |
-| Backlist after fixing what the test exposed | 0/80 | 74/74 | 67/74 | 74/74 | 74/74 | 98% |
+| **AuthorVoice, rules frozen before the test** | **1/80 (1%)** | **74/74** | **67/74** | **72/74** | **74/74** | **97%** |
+| AuthorVoice after fixing what the test exposed | 0/80 | 74/74 | 67/74 | 74/74 | 74/74 | 98% |
 
-The exact-match checker catches everything and cries wolf on almost a third of perfectly good lines. The usual word-error-rate threshold is quiet, but misses more than half the faults, including all but 5 of 74 swapped words: one wrong word in a long sentence is under 15%. Backlist's checker is as quiet as the threshold and as thorough as exact match.
+The exact-match checker catches everything and cries wolf on almost a third of perfectly good lines. The usual word-error-rate threshold is quiet, but misses more than half the faults, including all but 5 of 74 swapped words: one wrong word in a long sentence is under 15%. AuthorVoice's checker is as quiet as the threshold and as thorough as exact match.
 
 The frozen run is the honest held-out number. It also exposed three gaps, now fixed: a word only counts as a name if the book never writes it in lower case (a title-case table of contents had made "Through" a name, and "Mountains" was one because of "the Rocky Mountains"); a word the listener splits in two ("Decameron" as "de Cameron"); and the homophone "corps"/"core". The last row is after those fixes, so it is no longer a held-out number. **Every fault still missed is a repetition**: three words said twice, which the listener wrote down once (more on that below).
 
@@ -71,9 +73,9 @@ Tuning set (*A Christmas Carol*, 30 lines):
 |---|---|---|---|---|---|
 | Exact match after normalising | 12/30 (40%) | 21/21 | 20/21 | 21/21 | 21/21 |
 | Word error rate ≤ 15% | 2/30 (7%) | 17/21 | 17/21 | 4/21 | 21/21 |
-| **Backlist** | **1/30 (3%)** | **21/21** | **20/21** | **21/21** | **21/21** |
+| **AuthorVoice** | **1/30 (3%)** | **21/21** | **20/21** | **21/21** | **21/21** |
 
-The repeat it misses is a real limit of the listener, not the rules: Kokoro said "to the point to the point" and Whisper wrote it down once. Whisper was trained on tidied-up transcripts and quietly removes repetitions. The test set confirmed it: all seven faults Backlist misses there are repetitions.
+The repeat it misses is a real limit of the listener, not the rules: Kokoro said "to the point to the point" and Whisper wrote it down once. Whisper was trained on tidied-up transcripts and quietly removes repetitions. The test set confirmed it: all seven faults AuthorVoice misses there are repetitions.
 
 Two rules were added after the tuning run, from trying the app on a chapter of *A Princess of Mars* outside the test lines: a respelled name ("Sar-koh-ja") comes back as several words, and a split name ("Tar's Tar Cuss") can leave a stray piece beside it. Neither changed the tuning numbers above.
 
