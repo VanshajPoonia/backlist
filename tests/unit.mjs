@@ -194,6 +194,9 @@ eq('chapters with no audio are listed, not flagged', [rep.chapters.map((c) => c.
 const quoted = 'Sola glanced at the accouterments which were carried in my hand and slung across my shoulder.\n\nYou are a great chieftain now.';
 const quotedRep = proof(book(parse(quoted)), [{ name: 'q.mp3', pieces: [{ start: 0, end: 9, text: 'Sola glanced at the accoutrements, which were carried in my hand. Quote, you are a great chieftain now.' }] }]);
 eq('a sentence stops early even when its last word lines up with the next line\'s extra word', quotedRep.lines.map((L) => L.problems.map((p) => [p.type, p.said, p.of].filter((x) => x !== undefined))), [[['cut short', 11, 16]], [['added']]]);
+const longOne = story.split('\n\n')[1].split(/(?<=\.) /)[1];
+const fewMissing = proof(book(parse(`${longOne}\n\nThe plain was cold.`)), [{ name: 'f.mp3', pieces: [{ start: 0, end: 20, text: `${longOne.split(' ').slice(0, 58).join(' ')}. The plain was cold.` }] }]);
+eq('a long sentence missing only its last few words is still cut short (6 of 64)', fewMissing.cut.map((c) => [c.said, c.of]), [[58, 64]]);
 eq('the cut sentence is counted as a long one', rep.cut.map((c) => [c.said, c.of, c.long]), [[31, 64, true]]);
 const plist = pronunciationList(bk.lines, story);
 eq('the pronunciation list: names as whole phrases, with a possessive folded in', plist.filter((e) => e.kind === 'name').map((e) => [e.say, e.at.length]), [['Sola', 2], ['Dejah Thoris', 1], ['Tars Tarkas', 1]]);

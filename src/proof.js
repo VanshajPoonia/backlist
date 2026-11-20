@@ -154,20 +154,25 @@ export function proof(bk, files, { known = new Set(), fullText = '' } = {}) {
     return { ...L, inAudio: true, ops, ok: v.ok, problems, file, t, heard: flat.filter((o) => o.heard).map((o) => o.heard).join(' ') };
   });
 
-  // Sentences that stop early: three or more words, and at least a sixth of the sentence, never
-  // said at its end, after the narrator had said some of it. The alignment may pair the last
-  // missing word with the next sentence's first, so the end can hold a mismatch or two, as
-  // long as at least half of it is plainly missing.
+  // Sentences that stop early: three or more words never said at the end, after the narrator
+  // had said some of it. The unsaid end may hold a mismatch or two (the alignment can pair the
+  // last word with the next sentence's first) and one word matched by chance, as long as at
+  // least half of it is plainly missing.
   const sentences = new Map();
   for (const L of lines) if (L.inAudio) { if (!sentences.has(L.sentence)) sentences.set(L.sentence, []); sentences.get(L.sentence).push(L); }
   const cut = [];
   for (const group of sentences.values()) {
     const ops = group.flatMap((L) => L.ops.filter((o) => o.op !== 'ins').map((o) => ({ ...o, L })));
     const total = ops.length;
-    let k = ops.length;
-    while (k > 0 && ops[k - 1].op !== 'eq') k--;
-    const missing = total - k, dels = ops.slice(k).filter((o) => o.op === 'del').length;
-    if (missing < 3 || missing < total / 6 || k < 2 || dels * 2 < missing) continue;
+    let k = ops.length, chance = 0;
+    while (k > 0) {
+      if (ops[k - 1].op !== 'eq') { k--; continue; }
+      // One lone matched word ("the", "and") inside a long unsaid end does not end it.
+      if (!chance && total - k >= 3 && k > 1 && ops[k - 2].op !== 'eq') { chance++; k--; continue; }
+      break;
+    }
+    const dels = ops.slice(k).filter((o) => o.op === 'del').length;
+    if (dels < 3 || k < 2 || dels * 2 < total - k) continue;
     const at = ops[k];
     cut.push({ line: at.L.n, said: k, of: total, long: total > LONG });
     for (const L of group) {
