@@ -10,6 +10,7 @@
     "test": "node tests/unit.mjs && node tests/proof.mjs",
     "eval:engines": "node tests/engines.mjs",
     "eval:cutoff": "node tests/cutoff.mjs",
+    "eval:names": "node tests/names.mjs",
     "eval:sample": "node tests/sample.mjs"
   },
   "devDependencies": {
