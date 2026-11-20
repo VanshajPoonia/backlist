@@ -260,7 +260,7 @@ manuscript ──► chapters ──► lines (<= 50 words) ──► narration 
 Things the listener caught while building this, each now handled in `src/narrate.js` or `src/manuscript.js`:
 
 - **Roman numerals are read as "Roman".** Kokoro reads *Chapter IV* as "Chapter Roman four" and *Henry VIII* as "Henry Roman eight". Book headings get cardinals ("Chapter Four"), monarchs get ordinals ("Henry the Eighth").
-- **Long sentences are cut off without warning.** Kokoro reads at most 510 phoneme tokens at a time and silently drops the rest. Counted with Kokoro's own phoneme code on the text of the three test books, **17 sentences** are over that limit (an earlier count of 21 included six sentences of the Project Gutenberg licence and counted phonemes slightly differently). The longest, in *A Princess of Mars*, is 168 words (1,317 tokens), so more than half of it would simply never be said. The narrator splits sentences over 50 words at their own commas and semicolons, and re-splits any line that still comes close.
+- **Long sentences are cut off without warning.** Kokoro reads at most 510 phoneme tokens at a time and silently drops the rest. Counted with Kokoro's own phoneme code on the text of the three test books, **16 sentences** are over that limit (an earlier count of 21 included six sentences of the Project Gutenberg licence and counted phonemes slightly differently). The longest, in *A Princess of Mars*, is 168 words (1,317 tokens), so more than half of it would simply never be said. The narrator splits sentences over 50 words at their own commas and semicolons, and re-splits any line that still comes close.
 
 ### Narrator speed
 
