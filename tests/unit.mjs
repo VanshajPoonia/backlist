@@ -12,6 +12,7 @@ import { toListen, segmenter } from '../src/segment.js';
 import { alignFile } from '../src/align.js';
 import { book, proof } from '../src/proof.js';
 import { pronunciationList } from '../src/names.js';
+import { epubText, markdownText } from '../src/ebook.js';
 
 let failed = 0;
 const eq = (name, got, want) => {
@@ -191,6 +192,14 @@ eq('the cut sentence is counted as a long one', rep.cut.map((c) => [c.said, c.of
 const plist = pronunciationList(bk.lines, story);
 eq('the pronunciation list: names as whole phrases, with a possessive folded in', plist.filter((e) => e.kind === 'name').map((e) => [e.say, e.at.length]), [['Sola', 2], ['Dejah Thoris', 1], ['Tars Tarkas', 1]]);
 eq('and how each was heard', rep.names.find((e) => e.say === 'Sola').ways, [['sola', 1], ['solas', 1]]);
+
+// --- manuscripts that are not plain text ----------------------------------------------------------
+const epub = await epubText(new Uint8Array(readFileSync(new URL('fixtures/tiny.epub', import.meta.url))));
+eq('EPUB: chapters in spine order (not file order), headings kept, entities and markup gone', parse(epub).map((c) => [c.title, c.lines.length]), [['STAVE ONE. MARLEY’S GHOST.', 5], ['STAVE TWO.', 2]]);
+yes('EPUB: text decoded, no tags left', epub.includes('as dead as a door-nail. Mind!') && epub.includes('dark & still') && !/[<>]/.test(epub));
+eq('Markdown: front matter, links, quotes and list markers dropped; headings and scene breaks kept',
+  markdownText('---\ntitle: x\n---\n# Chapter 1\n\nShe said *no* to [the plan](http://x).\n\n* * *\n\n> A quote line.\n\n- a list item\n\nThe End\n===\n'),
+  '# Chapter 1\n\nShe said *no* to the plan.\n\n* * *\n\nA quote line.\n\na list item\n\n# The End');
 
 console.log(failed ? `\n${failed} FAILED` : '\nall unit checks pass');
 process.exit(failed ? 1 : 0);
