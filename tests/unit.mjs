@@ -9,6 +9,7 @@ import { readFileSync } from 'node:fs';
 import { probe, bytesReader, wavSlices } from '../src/probe.js';
 import { meter, judge as specs } from '../src/levels.js';
 import { toListen, segmenter } from '../src/segment.js';
+import { alignFile } from '../src/align.js';
 
 let failed = 0;
 const eq = (name, got, want) => {
@@ -141,6 +142,15 @@ yes(`speech is cut only at pauses (${cut.length} pieces, ${cut.map((p) => `${p.s
   cut.length >= 2 && cut.every((p) => !inside(p.start) && !inside(p.end) && p.end - p.start <= 27) && Math.abs(cut[0].start - (said[0][0] - 0.12)) < 0.03 && Math.abs(cut.at(-1).end - (said[9][1] + 0.12)) < 0.03);
 const nonstop = segmenter(), runOn = [...nonstop.push(Float32Array.from({ length: 70 * R16 }, () => (Math.random() * 2 - 1) * 0.3)), ...nonstop.flush()];
 yes(`a narrator who never pauses is still cut to fit the listener (${runOn.map((p) => (p.end - p.start).toFixed(1)).join(', ')} s)`, runOn.every((p) => p.end - p.start <= 27.5) && Math.abs(runOn.reduce((s, p) => s + p.end - p.start, 0) - 70) < 0.1);
+
+// --- a whole file against the whole manuscript ---------------------------------------------------
+const mars = readFileSync(new URL('../data/samples/mars.txt', import.meta.url), 'utf8');
+const marsWords = words(mars);
+const part = [...marsWords.slice(100, 150), ...marsWords.slice(151, 260)];
+const a = alignFile(marsWords, part);
+eq('a file that covers the middle of the book is found there, with the one word it skipped', [a.from, a.to, a.ops.filter((o) => o.op !== 'eq').map((o) => [o.op, o.bi])], [100, 260, [['del', 150]]]);
+eq('audio that is not this book matches nothing', alignFile(marsWords, words('preheat the oven and whisk the eggs with sugar until pale and fluffy')), null);
+
 
 console.log(failed ? `\n${failed} FAILED` : '\nall unit checks pass');
 process.exit(failed ? 1 : 0);
