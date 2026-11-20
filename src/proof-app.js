@@ -189,7 +189,8 @@ function render() {
     : 'The listener cannot judge performance or spell names it has never heard, so look over the pronunciation list too.';
 
   const notes = [];
-  for (const c of report.chapters) if (!c.audio) notes.push(`No audio file covers <strong>${esc(c.title)}</strong>.`);
+  const silent = report.chapters.filter((c) => !c.audio).map((c) => `<strong>${esc(c.title)}</strong>`);
+  if (silent.length) notes.push(`No audio covers ${silent.length > 4 ? `${silent.length} chapters, including ${silent.slice(0, 3).join(', ')}` : silent.join(', ')}. Those are skipped, not flagged.`);
   report.files.forEach((f, i) => {
     if (!f.matched) notes.push(`<strong>${esc(f.name)}</strong> does not match the manuscript.`);
     if (f.extraHead) notes.push(`${play(i, 0)} Before the book starts, <strong>${esc(f.name)}</strong> says “${esc(f.extraHead.slice(0, 160))}”. Fine if that is your opening credits.`);
