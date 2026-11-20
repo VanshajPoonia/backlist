@@ -10,6 +10,8 @@ import { probe, bytesReader, wavSlices } from '../src/probe.js';
 import { meter, judge as specs } from '../src/levels.js';
 import { toListen, segmenter } from '../src/segment.js';
 import { alignFile } from '../src/align.js';
+import { book, proof } from '../src/proof.js';
+import { pronunciationList } from '../src/names.js';
 
 let failed = 0;
 const eq = (name, got, want) => {
@@ -151,6 +153,44 @@ const a = alignFile(marsWords, part);
 eq('a file that covers the middle of the book is found there, with the one word it skipped', [a.from, a.to, a.ops.filter((o) => o.op !== 'eq').map((o) => [o.op, o.bi])], [100, 260, [['del', 150]]]);
 eq('audio that is not this book matches nothing', alignFile(marsWords, words('preheat the oven and whisk the eggs with sugar until pale and fluffy')), null);
 
+const story = `CHAPTER I
+
+Tars Tarkas rode out at dawn with Sola beside him. He rode on through the long grey morning, past the dry canals and the empty farms, past the towers that stood like broken teeth against the sky, and past the herds of thoats that grazed beside the road, until at last, when the sun was high and hot above the plain, he saw the walls of the dead city rise before him in silence. The plain was cold and grey, and the wind came hard from the north.
+
+CHAPTER II
+
+Dejah Thoris waited at the gate of the city. Nobody came to meet her that day. Sola's thoats were gone.
+
+CHAPTER III
+
+The end came quietly in the night.`;
+const bk = book(parse(story));
+const files = [
+  { name: 'ch1.mp3', pieces: [
+    { start: 0.5, end: 2, text: 'Chapter one.' },
+    { start: 2.5, end: 6, text: 'Tars Tarkas rode out at dawn with Sola beside him.' },
+    { start: 6.4, end: 14, text: 'He rode on through the long grey morning, past the dry canals and the empty farms, past the towers that stood like broken teeth against the sky, and past the herds.' },
+    { start: 14.5, end: 18, text: 'The plain was cold, and the wind came hard from the north.' },
+  ] },
+  { name: 'ch2.mp3', pieces: [
+    { start: 0.6, end: 3, text: 'Dejah Thoris waited at the gate of the city.' },
+    { start: 3.4, end: 6, text: 'Nobody came to meet her that that day. Solas thoats were gone.' },
+  ] },
+];
+const rep = proof(bk, files, { known: namesIn(story), fullText: story });
+const flagged = rep.lines.filter((L) => L.inAudio && !L.ok).map((L) => [L.text.slice(0, 20), L.problems.map((p) => p.type).join(), files[L.file].name]);
+eq('the report: a long sentence cut short, two skipped words, an unread heading, a doubled word', flagged, [
+  ['and past the herds o', 'cut short', 'ch1.mp3'], ['The plain was cold a', 'skipped', 'ch1.mp3'],
+  ['Chapter Two.', 'skipped', 'ch2.mp3'], ['Nobody came to meet ', 'added', 'ch2.mp3']]);
+const p0 = rep.lines.find((L) => L.text.startsWith('and past the herds')).problems[0];
+yes(`a cut sentence says how much was heard (${p0.said} of ${p0.of} words) and when (${p0.t.toFixed(1)} s)`, p0.said === 31 && p0.of === 64 && p0.t > 6.4 && p0.t <= 14);
+const grey = rep.lines.find((L) => L.text.startsWith('The plain')).problems[0];
+yes(`a problem is timed where it happened (${grey.t.toFixed(1)} s)`, grey.t >= 14.5 && grey.t <= 18);
+eq('chapters with no audio are listed, not flagged', [rep.chapters.map((c) => c.audio), rep.lines.filter((L) => L.chapter === 2).every((L) => !L.inAudio)], [[true, true, false], true]);
+eq('the cut sentence is counted as a long one', rep.cut.map((c) => [c.said, c.of, c.long]), [[31, 64, true]]);
+const plist = pronunciationList(bk.lines, story);
+eq('the pronunciation list: names as whole phrases, with a possessive folded in', plist.filter((e) => e.kind === 'name').map((e) => [e.say, e.at.length]), [['Sola', 2], ['Dejah Thoris', 1], ['Tars Tarkas', 1]]);
+eq('and how each was heard', rep.names.find((e) => e.say === 'Sola').ways, [['sola', 1], ['solas', 1]]);
 
 console.log(failed ? `\n${failed} FAILED` : '\nall unit checks pass');
 process.exit(failed ? 1 : 0);
