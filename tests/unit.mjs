@@ -66,6 +66,9 @@ yes('a name split into extra pieces', check('close to the rank of Tars Tarkas, w
 yes('a word the book also writes in lower case is not a name', !namesIn('the Rocky Mountains. We climbed the mountains.').has('mountains') && namesIn('Then Dejah Thoris spoke.').has('dejah'));
 yes('a split word with half already matched: "Decameron" heard as "de Cameron"', check('A copy of the Decameron, with a name.', 'A copy of the de Cameron, with a name.', namesIn('Read the Decameron.')).ok);
 yes('a doubled word is a stutter, even a small one', !check('Marley was as dead as a door-nail.', 'Marley was as dead as as a doornail.').ok);
+const runs = check('We had gone perhaps ten miles when the ground began to rise.', 'We had gone when the ground began to fall.');
+eq('each problem knows where it is in the alignment', runs.runs, [[3, 6], [11, 12]]);
+eq('long sentences remember their pieces', parse(long).flatMap((c) => c.lines.map((l) => l.part)), ps.map((_, j) => j));
 
 // --- audio ----------------------------------------------------------------------------------
 const tone = (f, s, r) => Float32Array.from({ length: Math.round(r * s) }, (_, i) => 0.3 * Math.sin((2 * Math.PI * f * i) / r));

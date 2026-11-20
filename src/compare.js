@@ -135,14 +135,21 @@ const content = (w) => !FUNCTION.has(w);
 
 /**
  * @param {Set<string>} known  names from the whole manuscript (see namesIn) and the guide
- * @returns {{ok: boolean, problems: {type:'skipped'|'added'|'misread', words:string, heard?:string}[], wer: number}}
+ * @returns {{ok: boolean, problems: {type:'skipped'|'added'|'misread', words:string, heard?:string}[], runs: number[][], wer: number}}
  */
 export function check(bookText, heardText, known = new Set()) {
   const toks = tokens(bookText);
-  const book = toks.map((t) => t.w), heard = words(heardText);
+  return judge(toks, align(toks.map((t) => t.w), words(heardText)), known);
+}
+
+/**
+ * The rules, on an alignment already made: `toks` are one line's tokens and `ops` that line's
+ * slice of the alignment (see align.js, which aligns a whole chapter at once).
+ */
+export function judge(toks, ops, known = new Set()) {
+  const book = toks.map((t) => t.w);
   const names = new Set([...toks.filter((t) => t.name).map((t) => t.w), ...[...known].filter((w) => book.includes(w))]);
-  const ops = align(book, heard);
-  const problems = [];
+  const problems = [], runs = []; // runs[i] = [from, to) in ops for problems[i]
   let errs = 0;
   for (let k = 0; k < ops.length;) {
     const o = ops[k];
@@ -184,12 +191,14 @@ export function check(bookText, heardText, known = new Set()) {
     const rejoins = (w) => (next?.op === 'eq' && same(next.book, w + next.heard)) || (prev?.op === 'eq' && same(prev.book, prev.heard + w));
     if (!missing.length && !doubled && ins.length === 1 && rejoins(ins[0])) { k = e; continue; }
 
+    const n = problems.length;
     if (dels.length >= 2 || dels.some(content)) problems.push({ type: 'skipped', words: dels.join(' ') });
     else if (ins.length >= 2 || ins.some(content) || doubled) problems.push({ type: 'added', words: ins.join(' ') });
     else if (subs.some((x) => content(x.book) || content(x.heard))) problems.push({ type: 'misread', words: missing.join(' '), heard: extra.join(' ') });
+    if (problems.length > n) runs.push([k, e]);
     k = e;
   }
-  return { ok: problems.length === 0, problems, wer: book.length ? errs / book.length : 0 };
+  return { ok: problems.length === 0, problems, runs, wer: book.length ? errs / book.length : 0 };
 }
 
 /**

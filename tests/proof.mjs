@@ -24,9 +24,10 @@ import { phonemize } from 'phonemizer';
 import { loadVoice, SAMPLE_RATE } from '../src/voice.js';
 import { loadListener, DEFAULT } from '../src/listen.js';
 import { narrate, heading } from '../src/narrate.js';
-import { check, words, namesIn, same } from '../src/compare.js';
+import { check, words, namesIn } from '../src/compare.js';
 import { parse } from '../src/manuscript.js';
 import { ensureBooks } from '../scripts/books.mjs';
+import { faultsFor, TYPES } from './faults.mjs';
 
 const LISTENER = process.env.LISTENER || DEFAULT;
 const DTYPE = process.env.DTYPE || 'q8';
@@ -98,35 +99,6 @@ async function roundTrip(spoken, v) {
   return heard;
 }
 
-// ---- faults -----------------------------------------------------------------------------
-
-const SWAPS = ['window', 'basket', 'yellow', 'thunder', 'pocket', 'silver', 'garden', 'kitten', 'pencil', 'blanket', 'button', 'carpet', 'lemon', 'violin', 'turnip', 'ladder'];
-const STOP = new Set(words('the and that with this from have were they them their there then than what when which while would could should about into upon been being very more most such only some other these those your yours'));
-
-function rng(seed) { return () => ((seed = (seed * 1664525 + 1013904223) >>> 0) / 4294967296); }
-
-function faultsFor(line, seed) {
-  const w = line.split(/\s+/);
-  if (w.length < 8) return null;
-  const r = rng(seed);
-  const at = (lo, hi) => lo + Math.floor(r() * (hi - lo));
-  const i = at(1, w.length - 4), j = at(1, w.length - 4);
-  const out = {
-    skipped: [...w.slice(0, i), ...w.slice(i + 3)].join(' '),
-    repeated: [...w.slice(0, j + 3), ...w.slice(j, j + 3), ...w.slice(j + 3)].join(' '),
-    'cut off': w.slice(0, Math.ceil(w.length * 0.6)).join(' '),
-  };
-  // Swap an ordinary lower-case word (never a name) for one that sounds nothing like it.
-  const cand = w.map((x, k) => [x, k]).filter(([x, k]) => k > 0 && /^[a-z]{4,}[,;:.!?]?$/.test(x) && !STOP.has(x.replace(/\W/g, '')));
-  if (cand.length) {
-    const [x, k] = cand[at(0, cand.length)];
-    const bare = x.replace(/\W/g, '');
-    const sub = SWAPS.find((s, n) => n >= at(0, SWAPS.length) - 0 && !same(bare, s)) ?? 'window';
-    out.swapped = [...w.slice(0, k), x.replace(bare, sub), ...w.slice(k + 1)].join(' ');
-  }
-  return out;
-}
-
 // ---- checkers ---------------------------------------------------------------------------
 
 function wer(a, b) {
@@ -147,7 +119,6 @@ console.log(`narrator: Kokoro-82M (${DTYPE}), listener: ${LISTENER}, set: ${SET}
 console.log(`${main.length} lines with planted faults, ${extra.length} more lines the narration rules change, ${heads.length} chapter headings\n`);
 const t0 = Date.now();
 
-const TYPES = ['skipped', 'repeated', 'swapped', 'cut off'];
 const res = Object.fromEntries(Object.keys(CHECKERS).map((k) => [k, { clean: 0, cleanN: 0, caught: Object.fromEntries(TYPES.map((t) => [t, 0])), n: Object.fromEntries(TYPES.map((t) => [t, 0])) }]));
 const falseAlarms = [], missed = [];
 

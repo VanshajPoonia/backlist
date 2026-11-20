@@ -64,8 +64,8 @@ export function pieces(sentence, max = MAX_WORDS) {
 }
 
 /**
- * @returns {{title:string, lines:{text:string, kind:'heading'|'line', pause:number}[]}[]}
- * `pause` is the silence after the line, in seconds.
+ * @returns {{title:string, lines:{text:string, kind:'heading'|'line', pause:number, part?:number}[]}[]}
+ * `pause` is the silence after the line, in seconds. `part` counts the pieces of a long sentence.
  */
 export function parse(raw) {
   const text = stripGutenberg(raw).replace(/\r\n?/g, '\n');
@@ -98,7 +98,7 @@ export function parse(raw) {
     const ss = sentences(para);
     ss.forEach((s, i) => {
       const ps = pieces(s);
-      ps.forEach((p, j) => ch.lines.push({ text: p, kind: 'line', pause: j < ps.length - 1 ? 0.12 : i < ss.length - 1 ? 0.35 : 0.8 }));
+      ps.forEach((p, j) => ch.lines.push({ text: p, kind: 'line', pause: j < ps.length - 1 ? 0.12 : i < ss.length - 1 ? 0.35 : 0.8, part: j }));
     });
   }
   return chapters.filter((c) => c.lines.some((l) => l.kind === 'line'));
