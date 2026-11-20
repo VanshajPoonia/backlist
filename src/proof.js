@@ -171,7 +171,7 @@ export function proof(bk, files, { known = new Set(), fullText = '' } = {}) {
     // Include extra pieces heard inside the name ("Tar's Tar Cuss").
     const L = lines[bk.lineOf[pos]];
     const i0 = L.ops.indexOf(os[0]), i1 = L.ops.indexOf(os.at(-1));
-    const span = L.ops.slice(i0, i1 + 1);
+    const span = i1 >= i0 ? L.ops.slice(i0, i1 + 1) : os; // a name split across two lines
     const text = span.filter((o) => o.hj !== undefined).map((o) => out[o.file].heard.w[o.hj]).join(' ');
     return { text, t: timeOf(os[0].file, span) ?? L.t, file: f?.name };
   };

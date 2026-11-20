@@ -32,19 +32,20 @@ export function pronunciationList(lines, fullText) {
     if (!found.has(key)) found.set(key, { ...entry, at: [] });
     found.get(key).at.push(pos);
   };
-  for (const L of lines) {
+  let run = [];
+  const flush = () => {
+    if (run.length) {
+      const ws = run.map((r) => r.w);
+      add(`n:${ws.join(' ')}`, { say: ws.map((w) => display.get(w) ?? w).join(' '), words: ws, kind: 'name' }, run[0].pos);
+    }
+    run = [];
+  };
+  lines.forEach((L, li) => {
     // Walk the written words beside the checker's words, so a run of names stops at punctuation.
-    let pos = L.from, run = [];
-    const flush = () => {
-      if (run.length) {
-        const ws = run.map((r) => r.w);
-        add(`n:${ws.join(' ')}`, { say: ws.map((w) => display.get(w) ?? w).join(' '), words: ws, kind: 'name' }, run[0].pos);
-      }
-      run = [];
-    };
+    let pos = L.from;
     const raw = L.text.split(/\s+/);
     const counts = raw.map((r) => tokens(r).length);
-    if (counts.reduce((s, n) => s + n, 0) !== L.toks.length) continue;
+    if (counts.reduce((s, n) => s + n, 0) !== L.toks.length) { flush(); return; }
     raw.forEach((r, i) => {
       const ws = tokens(r).map((t) => t.w);
       // "Sarkoja's" is Sarkoja: fold a possessive into the plain name when the book has both.
@@ -61,8 +62,10 @@ export function pronunciationList(lines, fullText) {
       }
       pos += counts[i];
     });
-    flush();
-  }
+    // A long sentence is cut into pieces, and a name can straddle the cut.
+    if (lines[li + 1]?.sentence !== L.sentence) flush();
+  });
+  flush();
   const order = { name: 0, foreign: 1, heteronym: 2 };
   return [...found.values()].sort((a, b) => order[a.kind] - order[b.kind] || b.at.length - a.at.length || a.say.localeCompare(b.say));
 }

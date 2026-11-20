@@ -194,6 +194,11 @@ eq('the cut sentence is counted as a long one', rep.cut.map((c) => [c.said, c.of
 const plist = pronunciationList(bk.lines, story);
 eq('the pronunciation list: names as whole phrases, with a possessive folded in', plist.filter((e) => e.kind === 'name').map((e) => [e.say, e.at.length]), [['Sola', 2], ['Dejah Thoris', 1], ['Tars Tarkas', 1]]);
 eq('and how each was heard', rep.names.find((e) => e.say === 'Sola').ways, [['sola', 1], ['solas', 1]]);
+const split = `${'the road ran on and on '.repeat(4)}and then the dawn came Tars Tarkas ${'rode over the dry moss of the dead sea '.repeat(3)}at dawn.`; // cut falls inside the name
+const splitBook = book(parse(`One day Tars Tarkas rode out.\n\n${split}`));
+const splitAt = splitBook.lines.find((L) => L.text.endsWith('Tars')) ? 'split' : 'not split';
+const splitRep = proof(splitBook, [{ name: 'a.mp3', pieces: [{ start: 0, end: 30, text: `One day Tars Tarkas rode out. ${split}` }] }], { known: namesIn(split), fullText: `One day Tars Tarkas rode out. ${split}` });
+eq(`a name across two pieces of a long sentence is still heard (${splitAt})`, splitRep.names.find((e) => e.say === 'Tars Tarkas').heard.map((h) => h.text), ['tars tarkas', 'tars tarkas']);
 
 const sheet = csv(rep, files.map((f) => f.name), [{ name: 'ch1.mp3', checks: [{ retailer: 'acx', check: 'Peak', value: '-1.0 dB', need: '-3 dB or lower', level: 'fail' }] }]).split('\r\n');
 eq('CSV: a header, one row per problem in audio order, then chapters with no audio, then level failures', [sheet.length, sheet[1].slice(0, 40), sheet.at(-3).slice(0, 52), sheet.at(-2).slice(0, 34)],
