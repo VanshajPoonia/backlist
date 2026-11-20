@@ -8,7 +8,8 @@
     "start": "python3 -m http.server 8000",
     "books": "node scripts/books.mjs",
     "test": "node tests/unit.mjs && node tests/proof.mjs",
-    "eval:engines": "node tests/engines.mjs"
+    "eval:engines": "node tests/engines.mjs",
+    "eval:cutoff": "node tests/cutoff.mjs"
   },
   "devDependencies": {
     "@huggingface/transformers": "4.3.1",
