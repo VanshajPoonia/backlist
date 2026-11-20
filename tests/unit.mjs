@@ -7,6 +7,7 @@ import { cardinal, ordinal, year, roman } from '../src/words.js';
 import { master, resample, wav } from '../src/audio.js';
 import { readFileSync } from 'node:fs';
 import { probe, bytesReader, wavSlices } from '../src/probe.js';
+import { meter, judge as specs } from '../src/levels.js';
 
 let failed = 0;
 const eq = (name, got, want) => {
@@ -97,6 +98,25 @@ let frames = 0, top = 0;
 for await (const s of wavSlices(fixture('s24-48k-stereo.wav'), w24, 0.1)) { frames += s.channels[1].length; for (const v of s.channels[0]) top = Math.max(top, Math.abs(v)); }
 yes(`WAV read in slices without a decoder (${frames} frames, peak ${top.toFixed(2)})`, frames === 12000 && top > 0.05 && top <= 1);
 eq('not audio', (await probe(bytesReader(new TextEncoder().encode('Chapter One. It was a dark and stormy night, and the rain fell in torrents.')))).format, 'unknown');
+
+// --- levels against retailer specs ------------------------------------------------------------
+// 0.75 s of room tone at -70 dB, 3 s of tone, 2 s of room tone: what a well-made chapter looks like.
+const fileRate = 44100, room = (s) => Float32Array.from({ length: s * fileRate }, () => (Math.random() * 2 - 1) * 10 ** (-70 / 20) * Math.sqrt(3));
+const body3 = Float32Array.from({ length: 3 * fileRate }, (_, i) => 0.14 * Math.sin((2 * Math.PI * 200 * i) / fileRate));
+const lv = meter(fileRate);
+for (const part of [room(0.75), body3, room(2)]) lv.add([part]);
+const st = lv.done();
+yes(`levels: RMS ${st.rmsDb.toFixed(1)}, peak ${st.peakDb.toFixed(1)}, noise floor ${st.noiseDb.toFixed(1)} dB, head ${st.headSec} s, tail ${st.tailSec} s`,
+  Math.abs(st.peakDb - 20 * Math.log10(0.14)) < 0.1 && Math.abs(st.noiseDb + 70) < 1 && Math.abs(st.headSec - 0.75) < 0.02 && Math.abs(st.tailSec - 2) < 0.02 && Math.abs(st.seconds - 5.75) < 1e-6);
+const mp3Info = { format: 'mp3', sampleRate: 44100, channels: 1, bitrate: 192000, cbr: true, jointStereo: false };
+const verdict = (info, stats) => Object.fromEntries(specs(info, stats).map((c) => [`${c.retailer} ${c.check}`, c.level]));
+const good = verdict(mp3Info, { ...st, rmsDb: -20 });
+yes('a 192 kbps CBR mono MP3 at -20 dB RMS passes every ACX check', Object.entries(good).filter(([k]) => k.startsWith('acx')).every(([, v]) => v === 'pass'));
+const bad = verdict({ ...mp3Info, channels: 2, bitrate: 128000, cbr: false, jointStereo: true }, { ...st, rmsDb: -15, peakDb: -1, noiseDb: -100, headSec: 0, tailSec: 0.2 });
+eq('a loud VBR joint-stereo MP3 with no room tone fails ACX on each count', ['Bitrate', 'Stereo mode', 'RMS', 'Peak', 'Silence at the start', 'Silence at the end'].map((k) => bad[`acx ${k}`]), ['fail', 'fail', 'fail', 'fail', 'fail', 'fail']);
+eq('pure digital silence is a warning, not room tone', bad['acx Room tone'], 'warn');
+eq('Google wants 256 kbps for stereo, and Kobo 192', [bad['google Bitrate'], bad['kobo Bitrate'], good['google Bitrate']], ['fail', 'warn', 'pass']);
+eq('Google takes 16-bit WAV at 44.1 kHz, not 24-bit', verdict({ format: 'wav', sampleRate: 48000, channels: 1, bits: 24 }, st)['google Bit depth'], 'fail');
 
 console.log(failed ? `\n${failed} FAILED` : '\nall unit checks pass');
 process.exit(failed ? 1 : 0);
