@@ -74,6 +74,7 @@ yes('a respelled name may come back as several words', check('So Sarkoja merely 
 yes('a name split into extra pieces', check('close to the rank of Tars Tarkas, who, as you know', "close to the rank of Tar's Tar Cuss. Who, as you know", namesIn('Then Tars Tarkas spoke.')).ok);
 yes('a word the book also writes in lower case is not a name', !namesIn('the Rocky Mountains. We climbed the mountains.').has('mountains') && namesIn('Then Dejah Thoris spoke.').has('dejah'));
 yes('a split word with half already matched: "Decameron" heard as "de Cameron"', check('A copy of the Decameron, with a name.', 'A copy of the de Cameron, with a name.', namesIn('Read the Decameron.')).ok);
+yes('known limit: a word that differs only in its vowels passes ("rupture" for "rapture")', check('an exclamation of rapture', 'an exclamation of rupture').ok);
 yes('a doubled word is a stutter, even a small one', !check('Marley was as dead as a door-nail.', 'Marley was as dead as as a doornail.').ok);
 const runs = check('We had gone perhaps ten miles when the ground began to rise.', 'We had gone when the ground began to fall.');
 eq('each problem knows where it is in the alignment', runs.runs, [[3, 6], [11, 12]]);
@@ -190,6 +191,9 @@ yes(`a cut sentence says how much was heard (${p0.said} of ${p0.of} words) and w
 const grey = rep.lines.find((L) => L.text.startsWith('The plain')).problems[0];
 yes(`a problem is timed where it happened (${grey.t.toFixed(1)} s)`, grey.t >= 14.5 && grey.t <= 18);
 eq('chapters with no audio are listed, not flagged', [rep.chapters.map((c) => c.audio), rep.lines.filter((L) => L.chapter === 2).every((L) => !L.inAudio)], [[true, true, false], true]);
+const quoted = 'Sola glanced at the accouterments which were carried in my hand and slung across my shoulder.\n\nYou are a great chieftain now.';
+const quotedRep = proof(book(parse(quoted)), [{ name: 'q.mp3', pieces: [{ start: 0, end: 9, text: 'Sola glanced at the accoutrements, which were carried in my hand. Quote, you are a great chieftain now.' }] }]);
+eq('a sentence stops early even when its last word lines up with the next line\'s extra word', quotedRep.lines.map((L) => L.problems.map((p) => [p.type, p.said, p.of].filter((x) => x !== undefined))), [[['cut short', 11, 16]], [['added']]]);
 eq('the cut sentence is counted as a long one', rep.cut.map((c) => [c.said, c.of, c.long]), [[31, 64, true]]);
 const plist = pronunciationList(bk.lines, story);
 eq('the pronunciation list: names as whole phrases, with a possessive folded in', plist.filter((e) => e.kind === 'name').map((e) => [e.say, e.at.length]), [['Sola', 2], ['Dejah Thoris', 1], ['Tars Tarkas', 1]]);

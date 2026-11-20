@@ -119,6 +119,17 @@ export function proof(bk, files, { known = new Set(), fullText = '' } = {}) {
     }
   }
 
+  // A line that stops early can end with its last word paired with the next line's first extra
+  // word ("shoulder" with "quote"). Give that word back to the next line.
+  for (const L of bk.lines) {
+    const r = runs.get(L.n), next = runs.get(L.n + 1);
+    if (!r || !next || next[0].file !== r.at(-1).file) continue;
+    const last = r.at(-1).ops, o = last.at(-1);
+    if (o?.op !== 'sub' || last.at(-2)?.op !== 'del' || last.at(-3)?.op !== 'del') continue;
+    last[last.length - 1] = { op: 'del', bi: o.bi };
+    next[0].ops.unshift({ op: 'ins', hj: o.hj });
+  }
+
   const timeOf = (fi, ops) => {
     const H = out[fi]?.heard;
     if (!H) return null;
@@ -144,7 +155,9 @@ export function proof(bk, files, { known = new Set(), fullText = '' } = {}) {
   });
 
   // Sentences that stop early: three or more words, and at least a sixth of the sentence, never
-  // said at its end, after the narrator had said some of it.
+  // said at its end, after the narrator had said some of it. The alignment may pair the last
+  // missing word with the next sentence's first, so the end can hold a mismatch or two, as
+  // long as at least half of it is plainly missing.
   const sentences = new Map();
   for (const L of lines) if (L.inAudio) { if (!sentences.has(L.sentence)) sentences.set(L.sentence, []); sentences.get(L.sentence).push(L); }
   const cut = [];
@@ -152,9 +165,9 @@ export function proof(bk, files, { known = new Set(), fullText = '' } = {}) {
     const ops = group.flatMap((L) => L.ops.filter((o) => o.op !== 'ins').map((o) => ({ ...o, L })));
     const total = ops.length;
     let k = ops.length;
-    while (k > 0 && ops[k - 1].op === 'del') k--;
-    const missing = total - k;
-    if (missing < 3 || missing < total / 6 || k < 2) continue;
+    while (k > 0 && ops[k - 1].op !== 'eq') k--;
+    const missing = total - k, dels = ops.slice(k).filter((o) => o.op === 'del').length;
+    if (missing < 3 || missing < total / 6 || k < 2 || dels * 2 < missing) continue;
     const at = ops[k];
     cut.push({ line: at.L.n, said: k, of: total, long: total > LONG });
     for (const L of group) {
