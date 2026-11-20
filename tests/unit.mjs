@@ -13,6 +13,7 @@ import { alignFile } from '../src/align.js';
 import { book, proof } from '../src/proof.js';
 import { pronunciationList } from '../src/names.js';
 import { epubText, markdownText } from '../src/ebook.js';
+import { csv, printable, clock } from '../src/report.js';
 
 let failed = 0;
 const eq = (name, got, want) => {
@@ -192,6 +193,13 @@ eq('the cut sentence is counted as a long one', rep.cut.map((c) => [c.said, c.of
 const plist = pronunciationList(bk.lines, story);
 eq('the pronunciation list: names as whole phrases, with a possessive folded in', plist.filter((e) => e.kind === 'name').map((e) => [e.say, e.at.length]), [['Sola', 2], ['Dejah Thoris', 1], ['Tars Tarkas', 1]]);
 eq('and how each was heard', rep.names.find((e) => e.say === 'Sola').ways, [['sola', 1], ['solas', 1]]);
+
+const sheet = csv(rep, files.map((f) => f.name), [{ name: 'ch1.mp3', checks: [{ retailer: 'acx', check: 'Peak', value: '-1.0 dB', need: '-3 dB or lower', level: 'fail' }] }]).split('\r\n');
+eq('CSV: a header, one row per problem in audio order, then chapters with no audio, then level failures', [sheet.length, sheet[1].slice(0, 40), sheet.at(-3).slice(0, 52), sheet.at(-2).slice(0, 34)],
+  [8, '"ch1.mp3","0:13","Cut short","Sentence s', '"","","No audio","No audio file covers this chapter"', '"ch1.mp3","","ACX (Audible) fails"']);
+eq('CSV: a cell a spreadsheet would run as a formula stays text', csv({ lines: [{ inAudio: true, ok: false, title: 'One', i: 0, file: 0, text: '=HYPERLINK("x")', heard: '', problems: [{ type: 'skipped', words: 'x', t: 1 }] }], names: [], chapters: [], files: [] }, ['a.mp3']).split('\r\n')[1].endsWith(`"'=HYPERLINK(""x"")",""`), true);
+yes('the printable page is one self-contained file', /^<!doctype html>/.test(printable(rep, ['ch1.mp3', 'ch2.mp3'])) && !/<script|<link/.test(printable(rep, ['ch1.mp3', 'ch2.mp3'])));
+eq('times read like a player shows them', [clock(75.4), clock(3725)], ['1:15', '1:02:05']);
 
 // --- manuscripts that are not plain text ----------------------------------------------------------
 const epub = await epubText(new Uint8Array(readFileSync(new URL('fixtures/tiny.epub', import.meta.url))));
