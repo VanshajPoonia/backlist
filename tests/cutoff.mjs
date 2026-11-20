@@ -2,27 +2,26 @@
 // tokens in one go and silently drops the rest. Every sentence in the three test books that
 // runs over that is rendered unsplit by Kokoro (so the engine really cuts it), and in full by
 // macOS `say` (so nothing is cut). Both sets go through the whole pipeline as one file each.
+// The sentence counts as caught if any of its lines is labelled cut short.
 //
 //   npm run eval:cutoff        needs macOS for the `say` half
 
 import { readFileSync, writeFileSync, existsSync, mkdirSync } from 'node:fs';
 import { execFileSync } from 'node:child_process';
-import { createHash } from 'node:crypto';
 import { fileURLToPath } from 'node:url';
 import * as tf from '@huggingface/transformers';
 import { phonemize } from 'phonemizer';
 import { loadVoice, SAMPLE_RATE } from '../src/voice.js';
-import { loadListener, DEFAULT } from '../src/listen.js';
 import { listenFile } from '../src/segment.js';
-import { parse, sentences, stripGutenberg } from '../src/manuscript.js';
+import { parse } from '../src/manuscript.js';
 import { namesIn } from '../src/compare.js';
 import { book, proof } from '../src/proof.js';
 import { ensureBooks, BOOKS } from '../scripts/books.mjs';
+import { CACHE, sha, readWav, slices, cachedListener } from './evalkit.mjs';
 
-const CACHE = new URL('./.cache/', import.meta.url);
+if (process.platform !== 'darwin') { console.log('needs macOS for say; skipped'); process.exit(0); }
 mkdirSync(new URL('cutoff/', CACHE), { recursive: true });
 await ensureBooks();
-const sha = (s) => createHash('sha1').update(s).digest('hex').slice(0, 16);
 const texts = Object.keys(BOOKS).map((id) => readFileSync(new URL(`books/pg${id}.txt`, CACHE), 'utf8'));
 const known = new Set(texts.flatMap((t) => [...namesIn(t)]));
 
@@ -30,14 +29,15 @@ const known = new Set(texts.flatMap((t) => [...namesIn(t)]));
 
 const voice = await loadVoice(tf, phonemize, { dtype: 'q8' });
 const tokenizer = await tf.AutoTokenizer.from_pretrained('onnx-community/Kokoro-82M-v1.0-ONNX');
+// Whole sentences as the manuscript reader sees them (no contents pages), rejoined from pieces.
 const long = [];
 for (const t of texts) {
-  for (const para of stripGutenberg(t).replace(/\r\n?/g, '\n').split(/\n\s*\n/)) {
-    for (const s of sentences(para.replace(/\s*\n\s*/g, ' ').trim())) {
-      if (s.split(/\s+/).length < 50) continue;
-      const n = tokenizer(await voice.phonemes(s)).input_ids.dims.at(-1);
-      if (n > 510) long.push(s);
-    }
+  const whole = [];
+  for (const l of parse(t).flatMap((c) => c.lines)) if (l.kind === 'line') { if (l.part) whole[whole.length - 1] += ` ${l.text}`; else whole.push(l.text); }
+  for (const s of whole) {
+    if (s.split(/\s+/).length < 50) continue;
+    const n = tokenizer(await voice.phonemes(s)).input_ids.dims.at(-1);
+    if (n > 510) long.push(s);
   }
 }
 console.log(`${long.length} sentences are over Kokoro's 510 tokens\n`);
@@ -56,11 +56,7 @@ function say(s) {
     writeFileSync(new URL('cutoff/line.txt', CACHE), s);
     execFileSync('say', ['-v', 'Samantha', '-o', fileURLToPath(file), `--data-format=LEI16@${SAMPLE_RATE}`, '-f', fileURLToPath(new URL('cutoff/line.txt', CACHE))]);
   }
-  const b = new Uint8Array(readFileSync(file));
-  const v = new DataView(b.buffer, b.byteOffset);
-  let o = 12;
-  while (String.fromCharCode(...b.subarray(o, o + 4)) !== 'data') o += 8 + v.getUint32(o + 4, true);
-  return Float32Array.from({ length: v.getUint32(o + 4, true) / 2 }, (_, i) => v.getInt16(o + 8 + 2 * i, true) / 32768);
+  return readWav(file);
 }
 function join(clips) {
   const gap = Math.round(0.6 * SAMPLE_RATE);
@@ -70,18 +66,7 @@ function join(clips) {
   return out;
 }
 
-const asr = await loadListener(tf, { model: DEFAULT });
-const cacheFile = new URL(`heard-cutoff-${DEFAULT}.json`, CACHE);
-const heard = existsSync(cacheFile) ? JSON.parse(readFileSync(cacheFile)) : {};
-async function hear(audio) {
-  const key = sha(Buffer.from(audio.buffer, audio.byteOffset, audio.byteLength));
-  if (heard[key] === undefined) {
-    heard[key] = await asr(audio, 16000);
-    writeFileSync(cacheFile, JSON.stringify(heard));
-  }
-  return heard[key];
-}
-async function* slices(x) { for (let i = 0; i < x.length; i += 60 * SAMPLE_RATE) yield { channels: [x.subarray(i, i + 60 * SAMPLE_RATE)], rate: SAMPLE_RATE }; }
+const { hear, save } = await cachedListener('heard-cutoff-whisper-base.en.json');
 
 const bk = book(parse(long.join('\n\n')));
 const results = {};
@@ -89,7 +74,7 @@ for (const [name, render] of [['kokoro, unsplit', kokoro], ['say, in full', say]
   const clips = [];
   for (const s of long) clips.push(await render(s));
   const { pieces } = await listenFile(slices(join(clips)), hear);
-  writeFileSync(cacheFile, JSON.stringify(heard));
+  save();
   const r = proof(bk, [{ name, pieces }], { known });
   const bySentence = new Map();
   for (const L of r.lines) {
