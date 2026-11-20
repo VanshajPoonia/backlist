@@ -8,6 +8,7 @@ import { master, resample, wav } from '../src/audio.js';
 import { readFileSync } from 'node:fs';
 import { probe, bytesReader, wavSlices } from '../src/probe.js';
 import { meter, judge as specs } from '../src/levels.js';
+import { toListen, segmenter } from '../src/segment.js';
 
 let failed = 0;
 const eq = (name, got, want) => {
@@ -117,6 +118,29 @@ eq('a loud VBR joint-stereo MP3 with no room tone fails ACX on each count', ['Bi
 eq('pure digital silence is a warning, not room tone', bad['acx Room tone'], 'warn');
 eq('Google wants 256 kbps for stereo, and Kobo 192', [bad['google Bitrate'], bad['kobo Bitrate'], good['google Bitrate']], ['fail', 'warn', 'pass']);
 eq('Google takes 16-bit WAV at 44.1 kHz, not 24-bit', verdict({ format: 'wav', sampleRate: 48000, channels: 1, bits: 24 }, st)['google Bit depth'], 'fail');
+
+// --- cutting long audio for the listener -------------------------------------------------------
+const sine = (f, s, r, a = 0.5) => Float32Array.from({ length: Math.round(r * s) }, (_, i) => a * Math.sin((2 * Math.PI * f * i) / r));
+const rms = (x) => Math.sqrt(x.reduce((s, v) => s + v * v, 0) / x.length);
+const low = toListen([sine(440, 1, 44100)], 44100), high = toListen([sine(12000, 1, 44100)], 44100);
+yes(`44.1 kHz to 16 kHz keeps speech (440 Hz at ${(rms(low.subarray(800, 15000)) / rms(sine(440, 1, 16000))).toFixed(3)}x) and removes what 16 kHz cannot hold (12 kHz down ${(20 * Math.log10(rms(high.subarray(800, 15000)) / 0.354)).toFixed(0)} dB)`,
+  low.length === 16000 && Math.abs(rms(low.subarray(800, 15000)) / rms(sine(440, 1, 16000)) - 1) < 0.01 && rms(high.subarray(800, 15000)) < 0.354 * 0.01);
+eq('stereo is mixed to mono', toListen([sine(440, 0.1, 16000), sine(440, 0.1, 16000, -0.5)], 16000).every((v) => Math.abs(v) < 1e-7), true);
+// Ten 2.5 s "sentences" of noise, 0.45 s apart, fed in 7 s slices as a decoder would.
+const R16 = 16000, said = [];
+const chapterAudio = new Float32Array(Math.round(30 * R16));
+for (let k = 0, at = 0.6; k < 10; k++, at += 2.95) {
+  said.push([at, at + 2.5]);
+  for (let i = Math.round(at * R16); i < Math.round((at + 2.5) * R16); i++) chapterAudio[i] = (Math.random() * 2 - 1) * 0.3;
+}
+const seg = segmenter(), cut = [];
+for (let i = 0; i < chapterAudio.length; i += 7 * R16) cut.push(...seg.push(chapterAudio.subarray(i, i + 7 * R16)));
+cut.push(...seg.flush());
+const inside = (t) => said.some(([a, b]) => t > a + 0.05 && t < b - 0.05);
+yes(`speech is cut only at pauses (${cut.length} pieces, ${cut.map((p) => `${p.start.toFixed(2)}-${p.end.toFixed(2)}`).join(' ')})`,
+  cut.length >= 2 && cut.every((p) => !inside(p.start) && !inside(p.end) && p.end - p.start <= 27) && Math.abs(cut[0].start - (said[0][0] - 0.12)) < 0.03 && Math.abs(cut.at(-1).end - (said[9][1] + 0.12)) < 0.03);
+const nonstop = segmenter(), runOn = [...nonstop.push(Float32Array.from({ length: 70 * R16 }, () => (Math.random() * 2 - 1) * 0.3)), ...nonstop.flush()];
+yes(`a narrator who never pauses is still cut to fit the listener (${runOn.map((p) => (p.end - p.start).toFixed(1)).join(', ')} s)`, runOn.every((p) => p.end - p.start <= 27.5) && Math.abs(runOn.reduce((s, p) => s + p.end - p.start, 0) - 70) < 0.1);
 
 console.log(failed ? `\n${failed} FAILED` : '\nall unit checks pass');
 process.exit(failed ? 1 : 0);
