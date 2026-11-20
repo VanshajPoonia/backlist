@@ -77,6 +77,7 @@ export function judge(info, stats) {
   const add = (retailer, check, value, need, ok, soft = false) => out.push({ retailer, check, value, need, level: ok ? 'pass' : soft ? 'warn' : 'fail' });
   const mono = info.channels === 1;
   const fmt = info.format;
+  const khz = info.sampleRate ? `${info.sampleRate / 1000} kHz` : 'unknown';
 
   // ACX: every file a 192 kbps+ constant-bitrate MP3 at 44.1 kHz, -23 to -18 dB RMS, peaks at -3 dB or
   // below, noise floor -60 dB or below, 0.5 to 1 s of room tone at the head and 1 to 5 s at the tail.
@@ -85,7 +86,7 @@ export function judge(info, stats) {
     add('acx', 'Bitrate', `${kbps(info.bitrate)}${info.cbr ? ' constant' : ' variable'}`, '192 kbps or more, constant', info.bitrate >= 192000 && info.cbr);
     if (!mono) add('acx', 'Stereo mode', info.jointStereo ? 'joint stereo' : 'stereo', 'not joint stereo', !info.jointStereo);
   }
-  add('acx', 'Sample rate', `${info.sampleRate / 1000} kHz`, '44.1 kHz', info.sampleRate === 44100);
+  add('acx', 'Sample rate', khz, '44.1 kHz', info.sampleRate === 44100);
   add('acx', 'RMS', fmtDb(stats.rmsDb), '-23 to -18 dB', stats.rmsDb >= -23 && stats.rmsDb <= -18);
   add('acx', 'Peak', fmtDb(stats.peakDb), '-3 dB or lower', stats.peakDb <= -3);
   add('acx', 'Noise floor', fmtDb(stats.noiseDb), '-60 dB or lower', stats.noiseDb <= -60);
@@ -107,7 +108,7 @@ export function judge(info, stats) {
   }
   if (lossless) {
     add('google', 'Bit depth', `${info.bits}-bit`, '16-bit', info.bits === 16);
-    add('google', 'Sample rate', `${info.sampleRate / 1000} kHz`, '44.1 kHz or more', info.sampleRate >= 44100);
+    add('google', 'Sample rate', khz, '44.1 kHz or more', info.sampleRate >= 44100);
   }
 
   // Kobo: everything at 96 kbps or more is re-encoded to 64 kbps; it recommends sending 192 kbps or more.

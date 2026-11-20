@@ -122,6 +122,7 @@ const bad = verdict({ ...mp3Info, channels: 2, bitrate: 128000, cbr: false, join
 eq('a loud VBR joint-stereo MP3 with no room tone fails ACX on each count', ['Bitrate', 'Stereo mode', 'RMS', 'Peak', 'Silence at the start', 'Silence at the end'].map((k) => bad[`acx ${k}`]), ['fail', 'fail', 'fail', 'fail', 'fail', 'fail']);
 eq('pure digital silence is a warning, not room tone', bad['acx Room tone'], 'warn');
 eq('Google wants 256 kbps for stereo, and Kobo 192', [bad['google Bitrate'], bad['kobo Bitrate'], good['google Bitrate']], ['fail', 'warn', 'pass']);
+eq('a file whose headers could not be read fails the format checks, and says unknown rather than guessing', [verdict({ format: 'ogg' }, st)['acx Format'], specs({ format: 'ogg' }, st).find((c) => c.check === 'Sample rate').value], ['fail', 'unknown']);
 eq('Google takes 16-bit WAV at 44.1 kHz, not 24-bit', verdict({ format: 'wav', sampleRate: 48000, channels: 1, bits: 24 }, st)['google Bit depth'], 'fail');
 
 // --- cutting long audio for the listener -------------------------------------------------------
