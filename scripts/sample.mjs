@@ -18,7 +18,7 @@ import { master, wav } from '../src/audio.js';
 const MISTAKES = [
   ['her two little hands', 'her hands'], // skipped
   ['“You are a great chieftain now, John Carter,” she said,', 'Quote. You are a great chieftain now, John Carter, unquote, she said,'], // added
-  ['an exclamation of rapture', 'an exclamation of rupture'], // a word misread
+  ['an exclamation of rapture', 'an exclamation of torture'], // a word misread
   ['carried in my hand and slung across my shoulder.', 'carried in my hand.'], // the sentence stops early
 ];
 

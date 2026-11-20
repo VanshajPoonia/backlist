@@ -9,7 +9,8 @@
     "books": "node scripts/books.mjs",
     "test": "node tests/unit.mjs && node tests/proof.mjs",
     "eval:engines": "node tests/engines.mjs",
-    "eval:cutoff": "node tests/cutoff.mjs"
+    "eval:cutoff": "node tests/cutoff.mjs",
+    "eval:sample": "node tests/sample.mjs"
   },
   "devDependencies": {
     "@huggingface/transformers": "4.3.1",
