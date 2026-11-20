@@ -1,10 +1,12 @@
 // Fast checks with no model: narration rules, the manuscript splitter, the checker's word
-// handling, and the mastering chain.
+// handling, the mastering chain, and reading audio files.
 import { narrate, heading, parseGuide } from '../src/narrate.js';
 import { parse, sentences, pieces, MAX_WORDS } from '../src/manuscript.js';
 import { check, words, same, namesIn } from '../src/compare.js';
 import { cardinal, ordinal, year, roman } from '../src/words.js';
 import { master, resample, wav } from '../src/audio.js';
+import { readFileSync } from 'node:fs';
+import { probe, bytesReader, wavSlices } from '../src/probe.js';
 
 let failed = 0;
 const eq = (name, got, want) => {
@@ -79,6 +81,22 @@ let err = 0;
 for (let i = 500; i < 40000; i++) err = Math.max(err, Math.abs(r[i] - ideal[i]));
 yes(`resampling is clean (max error ${err.toExponential(1)})`, err < 1e-3);
 eq('WAV header', new TextDecoder().decode(new Uint8Array(wav(new Float32Array(10), 44100), 0, 4)), 'RIFF');
+
+// --- audio files ------------------------------------------------------------------------------
+// One second of `say`, encoded by lame, afconvert and ffmpeg (tests/fixtures).
+const fixture = (f) => bytesReader(new Uint8Array(readFileSync(new URL(`fixtures/${f}`, import.meta.url))));
+const brief = (i) => [i.format, i.sampleRate, i.channels, i.bitrate, i.cbr, i.jointStereo ?? null];
+eq('MP3, constant 192 kbps mono', brief(await probe(fixture('cbr192-mono.mp3'))), ['mp3', 44100, 1, 192000, true, false]);
+eq('MP3, variable bitrate joint stereo', brief(await probe(fixture('vbr-joint.mp3'))), ['mp3', 44100, 2, 89000, false, true]);
+eq('M4A, AAC 128 kbps mono (channels from the AAC config, not the fixed 2)', brief(await probe(fixture('aac128.m4a'))), ['m4a', 44100, 1, 128000, null, null]);
+eq('AAC in ADTS frames', brief(await probe(fixture('aac128.aac'))).slice(0, 3), ['aac', 44100, 1]);
+eq('FLAC, 16-bit 22.05 kHz', [...brief(await probe(fixture('s16-22k.flac'))).slice(0, 3), (await probe(fixture('s16-22k.flac'))).bits], ['flac', 22050, 1, 16]);
+const w24 = await probe(fixture('s24-48k-stereo.wav'));
+eq('WAV, 24-bit stereo 48 kHz (extensible header)', [w24.format, w24.sampleRate, w24.channels, w24.bits, w24.seconds], ['wav', 48000, 2, 24, 0.25]);
+let frames = 0, top = 0;
+for await (const s of wavSlices(fixture('s24-48k-stereo.wav'), w24, 0.1)) { frames += s.channels[1].length; for (const v of s.channels[0]) top = Math.max(top, Math.abs(v)); }
+yes(`WAV read in slices without a decoder (${frames} frames, peak ${top.toFixed(2)})`, frames === 12000 && top > 0.05 && top <= 1);
+eq('not audio', (await probe(bytesReader(new TextEncoder().encode('Chapter One. It was a dark and stormy night, and the rain fell in torrents.')))).format, 'unknown');
 
 console.log(failed ? `\n${failed} FAILED` : '\nall unit checks pass');
 process.exit(failed ? 1 : 0);
