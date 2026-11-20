@@ -27,12 +27,17 @@ export function book(chapters) {
   return { chapters: chapters.map((c) => c.title), lines, words: all, lineOf, keys: bookKeys(all) };
 }
 
-/** A file's pieces -> one run of heard words, each with a time (spread evenly over its piece). */
+/**
+ * A file's pieces -> one run of heard words, each with a time. Within a piece, time is shared out
+ * by letters rather than by words, since long words take longer to say.
+ */
 export function heardWords(pieces) {
   const w = [], t = [];
   for (const p of pieces) {
-    const ws = words(p.text);
-    ws.forEach((x, k) => { w.push(x); t.push(p.start + ((p.end - p.start) * k) / Math.max(1, ws.length)); });
+    const ws = words(p.text), len = ws.map((x) => x.length + 2);
+    const all = len.reduce((a, b) => a + b, 0);
+    let at = 0;
+    ws.forEach((x, k) => { w.push(x); t.push(p.start + ((p.end - p.start) * at) / Math.max(1, all)); at += len[k]; });
   }
   return { w, t };
 }

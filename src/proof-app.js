@@ -185,7 +185,7 @@ function render() {
   const audio = done.reduce((s, d) => s + (d.stats?.seconds ?? 0), 0);
   $('#summary').textContent = flagged ? `${flagged} of ${checked} lines to check.` : checked ? `All ${checked} lines were heard as written.` : 'None of the audio matched the manuscript.';
   $('#summary-small').textContent = flagged
-    ? `Listen to these instead of all ${clock(audio)}. Each one starts a second before the problem.`
+    ? `Listen to these instead of all ${clock(audio)}. Each one plays from just before the problem.`
     : 'The listener cannot judge performance or spell names it has never heard, so look over the pronunciation list too.';
 
   const notes = [];
@@ -272,7 +272,7 @@ document.addEventListener('click', (e) => {
   if (!d) return;
   if (!urls.has(d.name)) urls.set(d.name, URL.createObjectURL(d.file));
   const p = $('#player');
-  const t = Math.max(0, Number(b.dataset.t) - 1);
+  const t = Math.max(0, Number(b.dataset.t) - 1.5);
   if (p.dataset.name !== d.name) { p.src = urls.get(d.name); p.dataset.name = d.name; }
   $('#player-bar').hidden = false;
   $('#now').textContent = `${d.name} from ${clock(t)}`;
