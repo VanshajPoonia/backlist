@@ -5,7 +5,7 @@
 //
 //   node scripts/sample.mjs        needs lame on the PATH
 
-import { readFileSync, writeFileSync } from 'node:fs';
+import { readFileSync, writeFileSync, rmSync } from 'node:fs';
 import { execFileSync } from 'node:child_process';
 import { fileURLToPath } from 'node:url';
 import * as tf from '@huggingface/transformers';
@@ -38,4 +38,5 @@ const m = master(clips, SAMPLE_RATE);
 const tmp = new URL('../tests/.cache/sample.wav', import.meta.url);
 writeFileSync(tmp, Buffer.from(wav(m.samples, m.rate)));
 execFileSync('lame', ['--quiet', '-m', 'm', '-b', '128', '--cbr', fileURLToPath(tmp), fileURLToPath(new URL('../data/samples/mars-narrated.mp3', import.meta.url))]);
+rmSync(tmp);
 console.log(`${m.stats.seconds.toFixed(1)} s, RMS ${m.stats.rmsDb.toFixed(1)} dB, peak ${m.stats.peakDb.toFixed(1)} dB`);
