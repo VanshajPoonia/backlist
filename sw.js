@@ -1,9 +1,10 @@
-// Offline support. A chapter is narrated on the author's own machine; once the two models
-// are cached (transformers.js keeps them in Cache Storage), it works with no connection.
-const SHELL = 'bl-shell-v2';
+// Offline support. Audio is checked (and narrated) on the author's own machine; once the
+// models are cached (transformers.js keeps them in Cache Storage), it works with no connection.
+const SHELL = 'bl-shell-v3';
 const RUNTIME = 'bl-runtime-v1';
 const FILES = [
-  './', 'index.html', 'assets/styles.css', 'assets/icon.svg', 'manifest.webmanifest',
+  './', 'index.html', 'narrate.html', 'assets/styles.css', 'assets/icon.svg', 'manifest.webmanifest',
+  'src/proof-app.js', 'src/align.js', 'src/decode.js', 'src/ebook.js', 'src/isolate.js', 'src/levels.js', 'src/names.js', 'src/probe.js', 'src/proof.js', 'src/report.js', 'src/segment.js',
   'src/app.js', 'src/audio.js', 'src/compare.js', 'src/listen.js', 'src/manuscript.js', 'src/narrate.js', 'src/voice.js', 'src/words.js', 'src/worker.js',
   'data/samples/mars.txt', 'data/samples/scarlet.txt',
 ];

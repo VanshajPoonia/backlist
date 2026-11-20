@@ -1,0 +1,94 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <title>AuthorVoice Proof: the narrator</title>
+  <meta name="description" content="The optional narrator in AuthorVoice Proof. An open voice model narrates a chapter on your own laptop, a second one proof-listens to every line, and you only re-check the lines it flags.">
+  <meta name="theme-color" content="#f2f4f7" media="(prefers-color-scheme: light)">
+  <meta name="theme-color" content="#0f1217" media="(prefers-color-scheme: dark)">
+  <link rel="manifest" href="manifest.webmanifest">
+  <link rel="icon" href="assets/icon.svg" type="image/svg+xml">
+  <link rel="stylesheet" href="assets/styles.css">
+  <script type="module" src="src/app.js"></script>
+</head>
+<body>
+  <main>
+    <header>
+      <p class="kicker"><span class="onair" aria-hidden="true"></span>AuthorVoice Proof · Narrator</p>
+      <p class="small"><a href="./">← Check narration from any engine</a></p>
+      <h1>Your backlist, read aloud. Proof-listened before you hear it.</h1>
+      <p class="lede">Paste a chapter. An open voice model narrates it on this device, then a second model listens to every line and flags the ones that came out wrong, so you re-check a handful of lines instead of the whole chapter. Download a file mastered to audiobook spec.</p>
+    </header>
+
+    <section class="card" aria-labelledby="h-book">
+      <h2 id="h-book"><span class="step">1</span> The chapter</h2>
+      <div class="samples">
+        <span class="small">Try one:</span>
+        <button class="chip" data-sample="mars">A Princess of Mars, ch. XI</button>
+        <button class="chip" data-sample="scarlet">A Study in Scarlet, ch. I</button>
+      </div>
+      <label class="drop" id="drop">
+        <input type="file" id="file" accept=".txt,.md,.docx,text/plain">
+        <span><strong>Drop a .txt, .md or .docx</strong> or click to choose one</span>
+      </label>
+      <textarea id="text" spellcheck="false" placeholder="…or paste a chapter here. Headings like “Chapter 4” start a new chapter; a line of * * * is a scene break."></textarea>
+      <p id="book-status" class="small" aria-live="polite"></p>
+      <div class="row" id="chapter-row" hidden>
+        <label for="chapter">Chapter</label>
+        <select id="chapter"></select>
+      </div>
+    </section>
+
+    <section class="card" aria-labelledby="h-voice">
+      <h2 id="h-voice"><span class="step">2</span> Voice and names</h2>
+      <div class="row">
+        <label for="voice">Narrator</label>
+        <select id="voice"></select>
+        <label for="speed">Pace</label>
+        <select id="speed"><option value="0.9">Slower</option><option value="1" selected>Normal</option><option value="1.1">Brisker</option></select>
+        <button id="preview" class="secondary">Hear a sample</button>
+      </div>
+      <label for="guide" class="label">Pronunciation guide <span class="small">(the one you would send a human narrator: <code>Name = how to say it</code>)</span></label>
+      <textarea id="guide" class="guide" spellcheck="false" placeholder="Dejah Thoris = Day-jah Thor-iss"></textarea>
+      <div id="names" class="names" aria-live="polite"></div>
+    </section>
+
+    <section class="card" aria-labelledby="h-go">
+      <h2 id="h-go"><span class="step">3</span> Narrate and proof-listen</h2>
+      <button id="go" class="primary" disabled>Narrate this chapter</button>
+      <p id="status" class="status small" aria-live="polite"></p>
+      <progress id="bar" max="1" value="0" hidden></progress>
+      <p class="small">Narrator: <strong>Kokoro-82M</strong> (Apache 2.0). Listener: <strong>Whisper base.en</strong> (MIT). Both open-weight, both running in this tab, downloaded once: about 400 MB if your browser can use the graphics card (much faster), 170 MB if not. Your manuscript is never uploaded.</p>
+    </section>
+
+    <section id="review" class="review" hidden>
+      <div class="review-head">
+        <div>
+          <p class="kicker">Proof-listening</p>
+          <h2 id="summary"></h2>
+          <p id="summary-small" class="small"></p>
+        </div>
+        <div class="filters" role="group" aria-label="Show">
+          <button class="chip" data-filter="flagged" aria-pressed="true">Flagged</button>
+          <button class="chip" data-filter="all" aria-pressed="false">All lines</button>
+        </div>
+      </div>
+      <ol id="lines" class="lines"></ol>
+      <div id="export" class="export" hidden>
+        <audio id="player" controls preload="none"></audio>
+        <div class="export-row">
+          <button id="download" class="primary">Download chapter (WAV)</button>
+          <p id="spec" class="small"></p>
+        </div>
+      </div>
+    </section>
+
+    <footer>
+      <p>Before you publish: most audiobook stores ask you to say when a book is digitally narrated, and some do not accept it at all. Check your distributor's rules.</p>
+      <p>Sample texts are public domain (via Project Gutenberg). Narration by <a href="https://huggingface.co/hexgrad/Kokoro-82M">Kokoro-82M</a>, proof-listening by <a href="https://huggingface.co/openai/whisper-base.en">Whisper</a>, both through <a href="https://github.com/huggingface/transformers.js">transformers.js</a>. <a href="https://github.com/VanshajPoonia/backlist">Source</a>, MIT.</p>
+      <p><a href="./">AuthorVoice Proof</a> checks narration from any engine against your manuscript.</p>
+    </footer>
+  </main>
+</body>
+</html>

@@ -1,7 +1,7 @@
 {
-  "name": "AuthorVoice: Audiobook Maker for Authors",
-  "short_name": "AuthorVoice",
-  "description": "Turn the books you have already written into audiobooks, narrated and proof-listened on your own laptop.",
+  "name": "AuthorVoice Proof: QA for AI audiobook narration",
+  "short_name": "AuthorVoice Proof",
+  "description": "Check AI audiobook narration from any engine against your manuscript, on your own device.",
   "start_url": "./",
   "display": "standalone",
   "background_color": "#f2f4f7",
