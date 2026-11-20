@@ -1,8 +1,8 @@
 import { meter } from './levels.js';
 
-// Long narration -> pieces the listener can hear one at a time. Whisper takes 30 seconds at
-// most and was measured here on single sentences, so a chapter is cut at its own pauses into
-// pieces of one or two sentences, each stamped with where it sits in the file.
+// Long narration -> pieces the listener can hear one at a time. Whisper always works on a
+// 30 second window, so short pieces waste most of each pass: a chapter is cut at its own
+// pauses into pieces of 12 to 25 seconds, each stamped with where it sits in the file.
 
 export const RATE = 16000;
 
@@ -53,7 +53,7 @@ export function toListen(channels, from) {
 
 const FRAME = 320; // 20 ms
 const MIN_PAUSE = 8; // frames: 160 ms of quiet is a pause
-const MAX = 20 * 50, HARD = 27 * 50; // frames: aim for at most 20 s, never more than 27 s
+const MAX = 25 * 50, HARD = 28 * 50; // frames: aim for at most 25 s, never more than 28 s
 
 /** Frame energies in dB. */
 function energies(x) {
@@ -105,8 +105,8 @@ export function pieces(x) {
     const len = cur[1] - cur[0];
     const next = runs[r + 1];
     const gap = next ? next[0] - b : Infinity;
-    // One or two sentences: stop at a sentence-sized pause once there is enough to hear.
-    if (!next || (len >= 150 && gap >= 15) || (len >= 300 && gap >= 10) || next[1] - cur[0] > MAX) { out.push(cur); cur = null; }
+    // Stop at a sentence-sized pause once there is enough to fill most of the window.
+    if (!next || (len >= 600 && gap >= 15) || (len >= 900 && gap >= 10) || next[1] - cur[0] > MAX) { out.push(cur); cur = null; }
   }
   // No pause at all for too long: cut at the quietest frame in the last third.
   return out.flatMap(function split([a, b]) {
